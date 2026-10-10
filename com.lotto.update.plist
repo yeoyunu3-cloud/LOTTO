@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.lotto.update</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Library/Frameworks/Python.framework/Versions/3.14/bin/python3</string>
+        <string>-u</string>
+        <string>/Users/yeoyun-u/개인개발/LOTTO/01.py</string>
+        <string>--watch</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/yeoyun-u/개인개발/LOTTO</string>
+    <!-- 매주 토요일(6) 21:00 실행. 맥이 잠자기 중이었으면 깨어날 때 실행됨 -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>6</integer>
+        <key>Hour</key>
+        <integer>21</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/Users/yeoyun-u/개인개발/LOTTO/lotto_update.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/yeoyun-u/개인개발/LOTTO/lotto_update.log</string>
+</dict>
+</plist>
