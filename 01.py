@@ -9,7 +9,8 @@
 
 실행: python3 01.py           # 한 번 수집
       python3 01.py --watch   # 이번 주 결과가 올라올 때까지 5분마다 재확인 (자동 실행용)
-자동 실행: launchd(com.lotto.update.plist)가 매주 토요일 21:00에 --watch 모드로 실행
+자동 수집: GitHub Actions(.github/workflows/lotto.yml)가 매주 토요일 밤에 실행 → CSV 커밋
+맥 동기화: launchd(com.lotto.update.plist)가 lotto_sync.sh로 git pull + 새 회차 알림
 """
 
 import csv
