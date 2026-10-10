@@ -1,0 +1,689 @@
+<title>로또 6/45 기록실</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: 추첨 결과표 — 최신 회차 카드가 맨 위, 그 아래 탭(통계 / 회차 기록 / 번호 추천)으로 내려가는 한 단 구성 */
+:root {
+  --paper: #f4f5f2;      /* 페이지 바탕: 아주 살짝 푸른 회색 */
+  --surface: #ffffff;    /* 카드 */
+  --ink: #17191c;        /* 본문 */
+  --ink-2: #4b5058;      /* 보조 글자 */
+  --muted: #7a8089;      /* 캡션, 축 */
+  --line: #e1e3df;       /* 구분선 */
+  --accent: #d1343f;     /* 로또 용지의 빨간 인쇄색 */
+  --accent-ink: #ffffff;
+  --accent-soft: #fbe9ea;
+  --bar: #c9cdd3;        /* 차트 기본 막대 */
+  --bar-hi: #d1343f;     /* 강조 막대 */
+  --ref: #17191c;
+  --focus: #2a6fdb;
+
+  /* 공식 공 색상 (동행복권 기준) — 공은 실제 물건처럼 두 테마에서 같은 색 */
+  --ball-1: #fbc400; --ball-2: #69c8f2; --ball-3: #ff7272; --ball-4: #aaaaaa; --ball-5: #b0d840;
+  --ball-ink: #15171a;
+
+  --f-display: "Do Hyeon", "IBM Plex Sans KR", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --r-sm: 6px; --r-md: 10px; --r-lg: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #121416; --surface: #1b1e21; --ink: #eef0f2; --ink-2: #b7bcc3; --muted: #8b919a;
+    --line: #2c3035; --accent: #f05a64; --accent-ink: #1a0b0c; --accent-soft: #3a1d20;
+    --bar: #3d434a; --bar-hi: #f05a64; --ref: #eef0f2; --focus: #6aa2ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #121416; --surface: #1b1e21; --ink: #eef0f2; --ink-2: #b7bcc3; --muted: #8b919a;
+  --line: #2c3035; --accent: #f05a64; --accent-ink: #1a0b0c; --accent-soft: #3a1d20;
+  --bar: #3d434a; --bar-hi: #f05a64; --ref: #eef0f2; --focus: #6aa2ff;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--f-body); font-size: 15px; line-height: 1.55;
+  padding-inline: 16px; padding-block: 20px 56px;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 20px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.label { font-size: 12px; letter-spacing: .06em; color: var(--muted); font-weight: 500; }
+
+/* ---------- header ---------- */
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center; font-family: var(--f-display); font-size: 15px; }
+.brand h1 { font-family: var(--f-display); font-weight: 400; font-size: 26px; letter-spacing: -.01em; }
+.brand p { margin: 0; font-size: 12.5px; color: var(--muted); }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface);
+  padding: 9px 14px; border-radius: var(--r-md); cursor: pointer; font-weight: 600; font-size: 14px;
+  transition: border-color .15s, background .15s;
+}
+.btn:hover { border-color: var(--ink-2); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn-primary:hover { filter: brightness(1.05); border-color: var(--accent); }
+.btn svg { width: 16px; height: 16px; flex: none; }
+
+/* ---------- balls ---------- */
+.balls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ball {
+  --size: 44px;
+  width: var(--size); height: var(--size); border-radius: 50%; flex: none;
+  display: grid; place-items: center; color: var(--ball-ink);
+  font-family: var(--f-num); font-weight: 600; font-size: calc(var(--size) * .4);
+  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%), var(--c);
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.12);
+}
+.ball.r1 { --c: var(--ball-1); } .ball.r2 { --c: var(--ball-2); } .ball.r3 { --c: var(--ball-3); }
+.ball.r4 { --c: var(--ball-4); } .ball.r5 { --c: var(--ball-5); }
+.ball.sm { --size: 30px; } .ball.xs { --size: 26px; }
+.ball.lg { --size: 56px; }
+.plus { color: var(--muted); font-family: var(--f-num); font-size: 20px; padding-inline: 2px; }
+
+/* ---------- hero (선택 회차) ---------- */
+.hero { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px; display: grid; gap: 20px; }
+.hero-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.round-title { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.round-title h2 { font-family: var(--f-display); font-weight: 400; font-size: 40px; line-height: 1; }
+.round-title h2 em { font-style: normal; color: var(--accent); }
+.round-title span { color: var(--ink-2); font-size: 14px; }
+.badge { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.nav { display: flex; align-items: center; gap: 6px; }
+.icon-btn { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); cursor: pointer; }
+.icon-btn:hover:not([disabled]) { border-color: var(--ink-2); }
+.icon-btn[disabled] { opacity: .35; cursor: default; }
+.icon-btn svg { width: 16px; height: 16px; }
+.round-input { width: 92px; height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); text-align: center; }
+.hero .ball.lg + .ball.lg { margin-left: 0; }
+.prizes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+.prize { background: var(--surface); padding: 12px 14px; display: grid; gap: 2px; min-width: 0; }
+.prize b { font-size: 18px; font-weight: 700; }
+.prize small { color: var(--muted); font-size: 12.5px; }
+
+/* ---------- tabs ---------- */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tab {
+  border: 0; background: none; padding: 10px 14px; cursor: pointer; font-weight: 600; color: var(--muted);
+  border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+}
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.panel { display: grid; gap: 18px; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.panel-head h3 { font-size: 18px; }
+.panel-head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); padding: 3px; }
+.seg button { border: 0; background: none; padding: 6px 12px; border-radius: 7px; cursor: pointer; font-size: 13.5px; color: var(--ink-2); font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; }
+.check input { accent-color: var(--accent); width: 16px; height: 16px; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+
+/* ---------- chart ---------- */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px; min-width: 0; }
+.chart-wrap { position: relative; }
+.chart-wrap svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
+.chart-wrap text { font-family: var(--f-num); font-size: 11px; fill: var(--muted); }
+.tip {
+  position: absolute; pointer-events: none; background: var(--ink); color: var(--paper);
+  padding: 8px 10px; border-radius: 8px; font-size: 12.5px; line-height: 1.45; white-space: nowrap;
+  transform: translate(-50%, calc(-100% - 10px)); box-shadow: 0 6px 18px rgba(0,0,0,.18);
+}
+.tip b { font-family: var(--f-num); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--ink-2); margin-top: 10px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.legend .dash { width: 16px; height: 0; border-top: 2px dashed var(--ref); border-radius: 0; vertical-align: 3px; }
+
+.lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.list h4 { margin: 0 0 10px; font-size: 14px; }
+.list h4 small { color: var(--muted); font-weight: 400; margin-left: 4px; }
+.list ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.list li { display: flex; align-items: center; gap: 10px; font-size: 13.5px; }
+.list li .meter { flex: 1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.list li .meter span { display: block; height: 100%; background: var(--ink-2); border-radius: 3px; }
+.list li .v { width: 64px; text-align: right; color: var(--ink-2); }
+
+/* ---------- records ---------- */
+.search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); padding: 0 12px; height: 40px; min-width: 0; flex: 1 1 260px; max-width: 420px; }
+.search svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+.search input { border: 0; outline: 0; background: none; width: 100%; height: 100%; }
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 640px; }
+th { text-align: left; font-weight: 600; font-size: 12px; color: var(--muted); letter-spacing: .04em; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface); position: sticky; top: 0; }
+td { padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: var(--paper); }
+tbody tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; }
+td .balls { gap: 4px; flex-wrap: nowrap; }
+.match { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
+.more-row { display: flex; justify-content: center; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; flex-wrap: wrap; }
+.empty { padding: 32px; text-align: center; color: var(--muted); }
+
+/* ---------- pick ---------- */
+.games { display: grid; gap: 10px; }
+.game { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.game .tag { font-family: var(--f-display); font-size: 20px; width: 22px; color: var(--accent); }
+.game .meta { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.rules li { font-size: 13px; color: var(--ink-2); padding: 10px 12px; border-radius: var(--r-md); background: var(--paper); }
+.rules li b { display: block; color: var(--ink); font-size: 13.5px; }
+.note { font-size: 12.5px; color: var(--muted); margin: 0; }
+
+/* ---------- toast & states ---------- */
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 999px; font-size: 13.5px; box-shadow: 0 8px 24px rgba(0,0,0,.2); z-index: 10; max-width: calc(100vw - 32px); }
+.loading { padding: 60px 0; text-align: center; color: var(--muted); }
+footer { color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 14px; }
+
+@media (max-width: 560px) {
+  .hero { padding: 16px; }
+  .round-title h2 { font-size: 32px; }
+  .ball.lg { --size: 42px; }
+  .balls { gap: 6px; }
+  .game .meta { margin-left: 0; width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">645</div>
+      <div>
+        <h1>로또 6/45 기록실</h1>
+        <p id="coverage">데이터를 불러오는 중…</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="dl-all" type="button" disabled>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8m0 0L5 7m3 3 3-3M3 12.5h10"/></svg>
+      엑셀로 받기
+    </button>
+  </header>
+
+  <section class="hero" id="hero" aria-live="polite">
+    <div class="loading">당첨번호를 불러오는 중…</div>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="보기 선택">
+    <button class="tab" role="tab" id="tab-stats" aria-controls="stats" aria-selected="true" type="button">번호 통계</button>
+    <button class="tab" role="tab" id="tab-records" aria-controls="records" aria-selected="false" type="button">회차 기록</button>
+    <button class="tab" role="tab" id="tab-pick" aria-controls="pick" aria-selected="false" type="button">번호 추천</button>
+  </nav>
+
+  <section class="panel" id="stats" role="tabpanel" aria-labelledby="tab-stats">
+    <div class="panel-head">
+      <div>
+        <h3>번호별 출현 횟수</h3>
+        <p id="stats-sub">막대에 마우스를 올리거나 눌러서 자세히 보세요.</p>
+      </div>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="기간">
+          <button type="button" data-range="all" aria-pressed="true">전체</button>
+          <button type="button" data-range="100" aria-pressed="false">최근 100회</button>
+          <button type="button" data-range="50" aria-pressed="false">최근 50회</button>
+        </div>
+        <label class="check"><input type="checkbox" id="with-bonus"> 보너스 포함</label>
+      </div>
+    </div>
+    <div class="card">
+      <div class="chart-wrap" id="chart"></div>
+      <div class="legend">
+        <span><i style="background:var(--bar-hi)"></i>가장 많이 나온 6개</span>
+        <span><i style="background:var(--bar)"></i>나머지 번호</span>
+        <span><i class="dash"></i><span id="ref-label">평균</span></span>
+      </div>
+    </div>
+    <div class="lists">
+      <div class="card list"><h4>많이 나온 번호<small id="l1-sub"></small></h4><ol id="list-hot"></ol></div>
+      <div class="card list"><h4>적게 나온 번호<small id="l2-sub"></small></h4><ol id="list-cold"></ol></div>
+      <div class="card list"><h4>오래 안 나온 번호<small>마지막 출현 이후</small></h4><ol id="list-gap"></ol></div>
+    </div>
+  </section>
+
+  <section class="panel" id="records" role="tabpanel" aria-labelledby="tab-records" hidden>
+    <div class="panel-head">
+      <label class="search">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+        <input id="q" type="text" inputmode="numeric" autocomplete="off" placeholder="번호로 찾기 (예: 7 13 34)" aria-label="포함된 번호로 회차 찾기">
+      </label>
+      <button class="btn" id="dl-filtered" type="button" disabled>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8m0 0L5 7m3 3 3-3M3 12.5h10"/></svg>
+        <span id="dl-filtered-label">이 목록 엑셀로 받기</span>
+      </button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>회차</th><th>추첨일</th><th>당첨번호</th><th>보너스</th><th class="r">1등 당첨자</th><th class="r">1등 1인당</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="more-row"><span id="count"></span><button class="btn" id="more" type="button">30개 더 보기</button></div>
+  </section>
+
+  <section class="panel" id="pick" role="tabpanel" aria-labelledby="tab-pick" hidden>
+    <div class="panel-head">
+      <div>
+        <h3 id="pick-title">추천 번호</h3>
+        <p>지금까지의 당첨 기록을 바탕으로 뽑아요. 누를 때마다 새로 뽑힙니다.</p>
+      </div>
+      <button class="btn btn-primary" id="draw" type="button">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v2.8h-2.8"/></svg>
+        다시 뽑기
+      </button>
+    </div>
+    <div class="games" id="games"></div>
+    <ul class="rules">
+      <li><b>가중치</b>전체 출현 빈도 50% + 최근 100회 빈도 50%</li>
+      <li><b>합계 98~177</b>역대 1등 조합의 약 80%가 이 범위</li>
+      <li><b>홀짝·고저 균형</b>홀수 2~4개, 1~22번 2~4개</li>
+      <li><b>제외 조건</b>3연속 번호, 역대 1등과 같은 조합</li>
+    </ul>
+    <p class="note">로또는 회차마다 독립 추첨이라 어떤 조합이든 1등 확률은 1/8,145,060로 같아요. 재미로 즐겨 주세요.</p>
+  </section>
+
+  <footer>
+    <span>출처: 동행복권 당첨결과 · 매주 토요일 20:35 추첨</span>
+    <span id="foot-updated"></span>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const NUMS = [2, 3, 4, 5, 6, 7];  // columns 번호1..번호6
+  let COLS = [], ROWS = [], BY_ROUND = new Map();
+  let current = 0;
+  const state = { range: "all", bonus: false, query: "", shown: 30 };
+
+  /* ---------- helpers ---------- */
+  const fmt = (n) => n.toLocaleString("ko-KR");
+  const won = (n) => {
+    if (!n) return "-";
+    if (n >= 1e8) {
+      const eok = Math.floor(n / 1e8), man = Math.round((n % 1e8) / 1e4);
+      return man ? `${fmt(eok)}억 ${fmt(man)}만원` : `${fmt(eok)}억원`;
+    }
+    if (n >= 1e4) return `${fmt(Math.round(n / 1e4))}만원`;
+    return `${fmt(n)}원`;
+  };
+  const range = (n) => (n <= 10 ? 1 : n <= 20 ? 2 : n <= 30 ? 3 : n <= 40 ? 4 : 5);
+  const ball = (n, size = "", extra = "") => `<span class="ball r${range(n)} ${size} ${extra}">${n}</span>`;
+  const nums = (r) => NUMS.map((i) => r[i]);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  let toastTimer;
+  const toast = (msg) => {
+    const t = $("#toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), 3200);
+  };
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+
+  /* ---------- hero ---------- */
+  function renderHero(round) {
+    const r = BY_ROUND.get(round); if (!r) return;
+    current = round;
+    const latest = ROWS[ROWS.length - 1][0];
+    const [rnd, date] = r;
+    const w1 = r[9], a1 = r[10], w2 = r[11], a2 = r[12];
+    const d = new Date(date + "T00:00:00");
+    const dateTxt = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 추첨`;
+    $("#hero").innerHTML = `
+      <div class="hero-head">
+        <div class="round-title">
+          <h2>제 <em class="num">${rnd}</em>회</h2>
+          <span>${dateTxt}</span>
+          ${rnd === latest ? '<span class="badge">최신</span>' : ""}
+        </div>
+        <div class="nav">
+          <button class="icon-btn" id="prev" type="button" aria-label="이전 회차" ${rnd <= 1 ? "disabled" : ""}>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 3-5 5 5 5"/></svg></button>
+          <input class="round-input num" id="round-input" type="number" min="1" max="${latest}" value="${rnd}" aria-label="회차 번호 입력">
+          <button class="icon-btn" id="next" type="button" aria-label="다음 회차" ${rnd >= latest ? "disabled" : ""}>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 3 5 5-5 5"/></svg></button>
+        </div>
+      </div>
+      <div class="balls" aria-label="당첨번호 ${nums(r).join(", ")}, 보너스 ${r[8]}">
+        ${nums(r).map((n) => ball(n, "lg")).join("")}
+        <span class="plus" aria-hidden="true">+</span>${ball(r[8], "lg")}
+      </div>
+      <div class="prizes">
+        <div class="prize"><span class="label">1등 1인당</span><b>${w1 ? won(a1) : "당첨자 없음"}</b><small>${w1 ? `${fmt(w1)}명 당첨` : "다음 회차로 이월"}</small></div>
+        <div class="prize"><span class="label">2등 1인당</span><b>${won(a2)}</b><small>${fmt(w2)}명 당첨</small></div>
+        <div class="prize"><span class="label">5등 당첨자</span><b class="num">${fmt(r[17])}명</b><small>1인당 ${fmt(r[18])}원</small></div>
+        <div class="prize"><span class="label">총 판매금액</span><b>${won(r[19])}</b><small>번호 합 ${nums(r).reduce((a, b) => a + b, 0)}</small></div>
+      </div>`;
+    $("#prev").onclick = () => renderHero(round - 1);
+    $("#next").onclick = () => renderHero(round + 1);
+    const inp = $("#round-input");
+    inp.onchange = () => {
+      const v = Math.round(Number(inp.value));
+      if (BY_ROUND.has(v)) renderHero(v);
+      else { toast(`1~${latest}회 사이로 입력해 주세요.`); inp.value = round; }
+    };
+  }
+
+  /* ---------- stats ---------- */
+  function computeStats(rangeKey, withBonus) {
+    const sub = rangeKey === "all" ? ROWS : ROWS.slice(-Number(rangeKey));
+    const cnt = new Array(46).fill(0);
+    for (const r of sub) {
+      for (const n of nums(r)) cnt[n]++;
+      if (withBonus) cnt[r[8]]++;
+    }
+    const lastSeen = new Array(46).fill(0);
+    for (const r of ROWS) for (const n of nums(r)) lastSeen[n] = r[0];
+    const latest = ROWS[ROWS.length - 1][0];
+    const items = [];
+    for (let n = 1; n <= 45; n++) items.push({ n, c: cnt[n], last: lastSeen[n], gap: latest - lastSeen[n] });
+    const expected = (sub.length * (withBonus ? 7 : 6)) / 45;
+    return { items, draws: sub.length, expected, from: sub[0][0], to: sub[sub.length - 1][0] };
+  }
+
+  function renderStats() {
+    const s = computeStats(state.range, state.bonus);
+    const sorted = [...s.items].sort((a, b) => b.c - a.c || a.n - b.n);
+    const top = new Set(sorted.slice(0, 6).map((x) => x.n));
+    $("#stats-sub").textContent = `${s.from}~${s.to}회 · ${fmt(s.draws)}번 추첨${state.bonus ? " · 보너스 포함" : ""}`;
+    $("#ref-label").textContent = `고르게 나왔을 때 평균 (${s.expected.toFixed(1)}회)`;
+    drawChart(s, top);
+
+    const max = sorted[0].c;
+    const row = (x, val, w) => `<li>${ball(x.n, "sm")}<span class="meter"><span style="width:${w}%"></span></span><span class="v num">${val}</span></li>`;
+    $("#list-hot").innerHTML = sorted.slice(0, 6).map((x) => row(x, `${x.c}회`, (x.c / max) * 100)).join("");
+    $("#list-cold").innerHTML = sorted.slice(-6).reverse().map((x) => row(x, `${x.c}회`, (x.c / max) * 100)).join("");
+    const gaps = [...s.items].sort((a, b) => b.gap - a.gap || a.n - b.n).slice(0, 6);
+    const gmax = Math.max(1, gaps[0].gap);
+    $("#list-gap").innerHTML = gaps.map((x) => row(x, `${x.gap}회째`, (x.gap / gmax) * 100)).join("");
+    const lbl = state.range === "all" ? "전체" : `최근 ${state.range}회`;
+    $("#l1-sub").textContent = lbl; $("#l2-sub").textContent = lbl;
+  }
+
+  function niceMax(v) {
+    const step = Math.pow(10, Math.floor(Math.log10(v)));
+    for (const m of [1, 2, 2.5, 5, 10]) if (m * step >= v) return m * step;
+    return 10 * step;
+  }
+
+  function drawChart(s, top) {
+    const host = $("#chart");
+    const W = Math.max(320, host.clientWidth || 700), H = W < 520 ? 220 : 260;
+    const m = { t: 14, r: 6, b: 26, l: 34 };
+    const iw = W - m.l - m.r, ih = H - m.t - m.b;
+    const ymax = niceMax(Math.max(...s.items.map((x) => x.c), s.expected) * 1.05);
+    const ticks = 4, slot = iw / 45, gap = W < 520 ? 1.5 : 2, bw = Math.max(2, slot - gap);
+    const y = (v) => m.t + ih - (v / ymax) * ih;
+    const rad = Math.min(4, bw / 2);
+    let g = "";
+    for (let i = 0; i <= ticks; i++) {
+      const v = (ymax / ticks) * i, yy = y(v);
+      g += `<line x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="1"/>`;
+      g += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end">${Math.round(v)}</text>`;
+    }
+    let bars = "";
+    s.items.forEach((x, i) => {
+      const x0 = m.l + i * slot + gap / 2, y0 = y(x.c), h = m.t + ih - y0;
+      const r = Math.min(rad, h);
+      const d = `M${x0},${m.t + ih}V${y0 + r}Q${x0},${y0} ${x0 + r},${y0}H${x0 + bw - r}Q${x0 + bw},${y0} ${x0 + bw},${y0 + r}V${m.t + ih}Z`;
+      bars += `<path d="${d}" fill="${top.has(x.n) ? "var(--bar-hi)" : "var(--bar)"}" data-i="${i}"/>`;
+    });
+    let xl = "";
+    [1, 5, 10, 15, 20, 25, 30, 35, 40, 45].forEach((n) => {
+      xl += `<text x="${m.l + (n - 1) * slot + slot / 2}" y="${H - 8}" text-anchor="middle">${n}</text>`;
+    });
+    const ey = y(s.expected);
+    host.innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="1번부터 45번까지 번호별 출현 횟수 막대 차트">
+        ${g}
+        <g>${bars}</g>
+        <line x1="${m.l}" x2="${W - m.r}" y1="${ey}" y2="${ey}" stroke="var(--ref)" stroke-width="1.5" stroke-dasharray="4 4" opacity=".7"/>
+        <line id="hover-line" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="var(--ink)" stroke-width="1" opacity="0"/>
+        ${xl}
+        <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="hit"/>
+      </svg>
+      <div class="tip" id="tip" hidden></div>`;
+    const svg = host.querySelector("svg"), tip = $("#tip"), hl = $("#hover-line");
+    const paths = host.querySelectorAll("path[data-i]");
+    const show = (ev) => {
+      const rect = svg.getBoundingClientRect(), scale = W / rect.width;
+      const px = (ev.clientX - rect.left) * scale;
+      const i = Math.min(44, Math.max(0, Math.floor((px - m.l) / slot)));
+      const x = s.items[i];
+      paths.forEach((p, k) => p.setAttribute("opacity", k === i ? "1" : ".55"));
+      const cx = m.l + i * slot + slot / 2;
+      hl.setAttribute("x1", cx); hl.setAttribute("x2", cx); hl.setAttribute("opacity", ".25");
+      const pct = ((x.c / s.draws) * 100).toFixed(1);
+      tip.innerHTML = `<b>${x.n}번</b> · ${fmt(x.c)}회 (${pct}%)<br>마지막 출현 <b>${x.last}</b>회${x.gap ? ` · ${x.gap}회째 쉬는 중` : " · 최신 회차"}`;
+      tip.hidden = false;
+      const left = Math.min(Math.max(cx / scale, 90), rect.width - 90);
+      tip.style.left = `${left}px`; tip.style.top = `${y(x.c) / scale}px`;
+    };
+    const hide = () => { tip.hidden = true; hl.setAttribute("opacity", "0"); paths.forEach((p) => p.setAttribute("opacity", "1")); };
+    const hit = host.querySelector("#hit");
+    hit.addEventListener("pointermove", show);
+    hit.addEventListener("pointerdown", show);
+    hit.addEventListener("pointerleave", hide);
+  }
+
+  /* ---------- records ---------- */
+  function parseQuery(q) {
+    return [...new Set((q.match(/\d+/g) || []).map(Number).filter((n) => n >= 1 && n <= 45))].slice(0, 6);
+  }
+  function filteredRows() {
+    const want = parseQuery(state.query);
+    const list = [...ROWS].reverse();
+    if (!want.length) return { list, want };
+    return { list: list.filter((r) => { const s = new Set(nums(r)); return want.every((n) => s.has(n)); }), want };
+  }
+  function renderRecords() {
+    const { list, want } = filteredRows();
+    const ws = new Set(want);
+    const shown = list.slice(0, state.shown);
+    $("#rows").innerHTML = shown.length ? shown.map((r) => `
+      <tr data-round="${r[0]}">
+        <td class="num"><b>${r[0]}</b></td>
+        <td class="num">${r[1]}</td>
+        <td><div class="balls">${nums(r).map((n) => ball(n, "xs", ws.has(n) ? "match" : "")).join("")}</div></td>
+        <td>${ball(r[8], "xs")}</td>
+        <td class="r num">${r[9] ? fmt(r[9]) + "명" : "이월"}</td>
+        <td class="r">${r[9] ? won(r[10]) : "-"}</td>
+      </tr>`).join("")
+      : `<tr><td colspan="6" class="empty">${esc(want.join(", "))}번이 모두 함께 나온 회차가 없어요.</td></tr>`;
+    $("#count").textContent = want.length
+      ? `${want.join(", ")}번 포함 ${fmt(list.length)}회차 중 ${fmt(shown.length)}개 표시`
+      : `전체 ${fmt(list.length)}회차 중 ${fmt(shown.length)}개 표시`;
+    $("#more").hidden = shown.length >= list.length;
+    $("#dl-filtered-label").textContent = want.length ? `검색 결과 엑셀로 받기 (${fmt(list.length)}회차)` : "이 목록 엑셀로 받기";
+  }
+
+  /* ---------- pick (02.py와 같은 방식) ---------- */
+  function weightedPick(weights, k) {
+    const pool = new Map(weights), out = [];
+    for (let j = 0; j < k; j++) {
+      let total = 0; for (const w of pool.values()) total += w;
+      let r = Math.random() * total;
+      for (const [n, w] of pool) { r -= w; if (r <= 0) { out.push(n); pool.delete(n); break; } }
+      if (out.length < j + 1) { const n = [...pool.keys()].pop(); out.push(n); pool.delete(n); }
+    }
+    return out.sort((a, b) => a - b);
+  }
+  function drawGames(games = 5) {
+    const total = new Array(46).fill(0), recent = new Array(46).fill(0), bonus = new Array(46).fill(0);
+    ROWS.forEach((r, i) => {
+      for (const n of nums(r)) { total[n]++; if (i >= ROWS.length - 100) recent[n]++; }
+      bonus[r[8]]++;
+    });
+    const tSum = total.reduce((a, b) => a + b, 0), rSum = recent.reduce((a, b) => a + b, 0);
+    const mainW = [], bonusW = [];
+    for (let n = 1; n <= 45; n++) {
+      mainW.push([n, 0.5 * total[n] / tSum + 0.5 * recent[n] / rSum]);
+      bonusW.push([n, bonus[n] + 1]);
+    }
+    const past = new Set(ROWS.map((r) => nums(r).join(",")));
+    const ok = (a) => {
+      const sum = a.reduce((x, y) => x + y, 0), odd = a.filter((n) => n % 2).length, low = a.filter((n) => n <= 22).length;
+      const run3 = a.some((n, i) => i < 4 && a[i + 1] === n + 1 && a[i + 2] === n + 2);
+      return sum >= 98 && sum <= 177 && odd >= 2 && odd <= 4 && low >= 2 && low <= 4 && !run3 && !past.has(a.join(","));
+    };
+    const out = [], seen = new Set();
+    let guard = 0;
+    while (out.length < games && guard++ < 5000) {
+      const a = weightedPick(mainW, 6);
+      if (!ok(a) || seen.has(a.join(","))) continue;
+      seen.add(a.join(","));
+      const b = weightedPick(bonusW.filter(([n]) => !a.includes(n)), 1)[0];
+      out.push({ a, b });
+    }
+    $("#games").innerHTML = out.map((g, i) => {
+      const odd = g.a.filter((n) => n % 2).length, sum = g.a.reduce((x, y) => x + y, 0);
+      return `<div class="game"><span class="tag">${"ABCDE"[i]}</span>
+        <div class="balls">${g.a.map((n) => ball(n)).join("")}<span class="plus" aria-hidden="true">+</span>${ball(g.b)}</div>
+        <span class="meta num">합 ${sum} · 홀${odd} 짝${6 - odd}</span></div>`;
+    }).join("");
+  }
+
+  /* ---------- excel ---------- */
+  let xlsxLoading = null;
+  function loadXlsx() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (!xlsxLoading) xlsxLoading = new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      s.onload = () => res(window.XLSX); s.onerror = () => { xlsxLoading = null; rej(new Error("load")); };
+      document.head.appendChild(s);
+    });
+    return xlsxLoading;
+  }
+  function sheetFromRows(XLSX, header, rows, widths, moneyCols = []) {
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    ws["!cols"] = widths.map((w) => ({ wch: w }));
+    ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: header.length - 1 } }) };
+    for (let r = 1; r <= rows.length; r++) for (const c of moneyCols) {
+      const cell = ws[XLSX.utils.encode_cell({ r, c })]; if (cell) cell.z = "#,##0";
+    }
+    return ws;
+  }
+  async function exportExcel(rowsAsc, filename, btn) {
+    const downloads = window.claude ? await window.claude.use("downloads") : null;
+    if (!downloads) { toast("이 화면에서는 파일 저장을 쓸 수 없어요. claude.ai에서 링크를 열어 주세요."); return; }
+    btn.disabled = true;
+    try {
+      const XLSX = await loadXlsx();
+      const wb = XLSX.utils.book_new();
+      const moneyIdx = COLS.map((c, i) => (/금액|당첨자수/.test(c) ? i : -1)).filter((i) => i >= 0);
+      XLSX.utils.book_append_sheet(wb, sheetFromRows(XLSX, COLS, rowsAsc, COLS.map((c, i) => (i === 1 ? 12 : moneyIdx.includes(i) ? 16 : 7)), moneyIdx), "당첨번호");
+      const s = computeStats("all", false), r100 = computeStats("100", false), sb = computeStats("all", true);
+      const statRows = s.items.map((x, i) => [x.n, x.c, +((x.c / s.draws) * 100).toFixed(2), sb.items[i].c - x.c, r100.items[i].c, x.last, x.gap]);
+      XLSX.utils.book_append_sheet(wb, sheetFromRows(XLSX, ["번호", "출현횟수", "출현률(%)", "보너스출현", "최근100회_출현", "마지막출현회차", "미출현_회차수"], statRows, [6, 10, 10, 10, 14, 14, 14]), "번호별 통계");
+      const buf = XLSX.write(wb, { bookType: "xlsx", type: "array", compression: true });
+      await downloads.save({ filename, data: buf });
+      toast(`${filename} 저장을 시작했어요.`);
+    } catch (e) {
+      const code = e && e.code;
+      if (code === "declined") toast("저장을 취소했어요.");
+      else if (code === "rate_limited") toast("이미 저장 창이 열려 있어요. 잠시 뒤 다시 눌러 주세요.");
+      else if (e && e.message === "load") toast("엑셀 변환 도구를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.");
+      else toast("엑셀 파일을 만들지 못했어요. 다시 시도해 주세요.");
+    } finally { btn.disabled = false; }
+  }
+
+  /* ---------- tabs ---------- */
+  const TABS = ["stats", "records", "pick"];
+  function selectTab(id, focus) {
+    TABS.forEach((t) => {
+      const on = t === id;
+      $(`#tab-${t}`).setAttribute("aria-selected", on); $(`#tab-${t}`).tabIndex = on ? 0 : -1;
+      $(`#${t}`).hidden = !on;
+    });
+    if (id === "stats") renderStats();
+    if (focus) $(`#tab-${id}`).focus();
+    store.set("lotto-tab", id);
+  }
+
+  /* ---------- boot ---------- */
+  async function boot() {
+    let data;
+    try {
+      const res = await fetch("lotto.json", { cache: "no-cache" });
+      if (!res.ok) throw new Error(res.status);
+      data = await res.json();
+    } catch {
+      $("#hero").innerHTML = `<div class="loading">당첨번호 데이터를 불러오지 못했어요. 새로고침해 주세요.</div>`;
+      $("#coverage").textContent = "데이터를 불러오지 못했어요";
+      return;
+    }
+    COLS = data.columns; ROWS = data.rows;
+    ROWS.forEach((r) => BY_ROUND.set(r[0], r));
+    const last = ROWS[ROWS.length - 1];
+    $("#coverage").textContent = `1~${last[0]}회 당첨번호 · ${last[1]} 추첨까지`;
+    $("#foot-updated").textContent = `마지막 반영: 제${last[0]}회 (${last[1]})`;
+    $("#pick-title").textContent = `제${last[0] + 1}회 추천 번호`;
+    renderHero(last[0]);
+    renderRecords();
+    drawGames();
+
+    const dlAll = $("#dl-all"), dlF = $("#dl-filtered");
+    dlAll.disabled = false; dlF.disabled = false;
+    dlAll.onclick = () => exportExcel(ROWS, `로또_1-${last[0]}회.xlsx`, dlAll);
+    dlF.onclick = () => {
+      const { list, want } = filteredRows();
+      if (!list.length) { toast("받을 회차가 없어요. 검색어를 바꿔 보세요."); return; }
+      const name = want.length ? `로또_${want.join("-")}번포함.xlsx` : `로또_1-${last[0]}회.xlsx`;
+      exportExcel([...list].reverse(), name, dlF);
+    };
+
+    let saved = store.get("lotto-tab");
+    const hash = location.hash.slice(1);
+    selectTab(TABS.includes(hash) ? hash : TABS.includes(saved) ? saved : "stats");
+
+    let rt; new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(() => { if (!$("#stats").hidden) renderStats(); }, 120); }).observe($("#chart"));
+
+    // 엑셀 저장을 쓸 수 없는 화면이면 버튼을 미리 꺼둠
+    if (window.claude) window.claude.use("downloads").then((d) => {
+      if (!d) { [dlAll, dlF].forEach((b) => { b.disabled = true; b.title = "claude.ai에서 열면 엑셀로 받을 수 있어요"; }); }
+    });
+  }
+
+  TABS.forEach((t, i) => {
+    const el = $(`#tab-${t}`);
+    el.addEventListener("click", () => selectTab(t));
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        selectTab(TABS[(i + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length], true);
+      }
+    });
+  });
+  document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => {
+    state.range = b.dataset.range;
+    document.querySelectorAll(".seg button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    renderStats();
+  }));
+  $("#with-bonus").addEventListener("change", (e) => { state.bonus = e.target.checked; renderStats(); });
+  let qt;
+  $("#q").addEventListener("input", (e) => { clearTimeout(qt); qt = setTimeout(() => { state.query = e.target.value; state.shown = 30; renderRecords(); }, 150); });
+  $("#more").addEventListener("click", () => { state.shown += 30; renderRecords(); });
+  $("#rows").addEventListener("click", (e) => {
+    const tr = e.target.closest("tr[data-round]"); if (!tr) return;
+    renderHero(Number(tr.dataset.round));
+    $("#hero").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  });
+  $("#draw").addEventListener("click", () => drawGames());
+
+  boot();
+})();
+</script>
