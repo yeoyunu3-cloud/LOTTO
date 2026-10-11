@@ -30,7 +30,6 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 DATA_CSV = BASE_DIR / "lotto_all.csv"
 FREQ_CSV = BASE_DIR / "lotto_frequency.csv"
-WEB_JSON = BASE_DIR / "web" / "lotto.json"   # 웹 페이지(web/index.html)가 읽는 데이터
 
 API_URL = "https://www.dhlottery.co.kr/lt645/selectPstLt645InfoNew.do"
 HEADERS = {
@@ -182,12 +181,6 @@ def save_csv(path, columns, rows):
         writer.writerows(rows)
 
 
-def save_web_json(rows):
-    WEB_JSON.parent.mkdir(exist_ok=True)
-    data = {"columns": COLUMNS, "rows": [[r[c] for c in COLUMNS] for r in rows]}
-    WEB_JSON.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-
-
 # ---------------------------------------------------------------- 분석
 
 def frequency(rows):
@@ -266,7 +259,6 @@ def main():
     save_csv(DATA_CSV, COLUMNS, rows)
     freq = frequency(rows)
     save_csv(FREQ_CSV, list(freq[0].keys()), freq)
-    save_web_json(rows)
 
     print(f"\n저장: {DATA_CSV.name} ({len(rows)}행), {FREQ_CSV.name}")
     print(f"\n=== 가장 많이 나온 번호 TOP 10 (1~{rows[-1]['회차']}회, 보너스 제외) ===")
